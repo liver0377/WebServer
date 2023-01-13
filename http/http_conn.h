@@ -118,7 +118,7 @@ class http_conn {
    int m_connfd;                  // 连接套接字
    sockaddr_in m_client_address;  // 客户端地址
 
-   std::map<std::string, std::string> m_users;
+   static std::map<std::string, std::string> m_users;
    std::string m_user;    // sql用户名
    std::string m_passwd;  // sql密码
    std::string m_dbname;  // sql数据库名字

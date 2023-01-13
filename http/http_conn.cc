@@ -2,6 +2,8 @@
 
 int http_conn::m_user_count = 0;
 int http_conn::m_epollfd = 0;
+std::map<std::string, std::string> http_conn::m_users =
+    std::map<std::string, std::string>();
 
 const char* ok_200_title = "OK";
 const char* error_400_title = "Bad Request";
@@ -49,6 +51,7 @@ void http_conn::init(int connfd, const sockaddr_in& client_addr, char* doc_root,
 
 void http_conn::close_conn() {
    Utils::removefd(m_epollfd, m_connfd);
+   m_connfd = -1;
    m_user_count--;
 }
 
