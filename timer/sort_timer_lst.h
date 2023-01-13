@@ -167,14 +167,14 @@ void sort_timer_lst::del_timer(util_timer* timer) {
 
    if (timer == head) {
       head = head->next;
-      delete head->prev;
       head->prev = NULL;
+      delete timer;
       return;
    }
 
    if (timer == tail) {
-      tail = timer->prev;
-      timer->prev->next = NULL;
+      tail = tail->prev;
+      tail->next = NULL;
       delete timer;
       return;
    }
