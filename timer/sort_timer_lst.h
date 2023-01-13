@@ -143,7 +143,7 @@ void sort_timer_lst::adjust_timer(util_timer* timer) {
 
    if (head == timer) {
       head = head->next;
-      head->prev = timer;
+      head->prev = NULL;
       timer->next = NULL;
       add_timer(timer, head);
    } else {
