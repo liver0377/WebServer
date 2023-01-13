@@ -9,9 +9,9 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <cstring>
+#include <map>
 #include <string>
 #include <utility>
-#include <map>
 #include "CGImysql/sql_connection_pool.h"
 #include "log/log.h"
 #include "utils/utils.h"
@@ -73,6 +73,7 @@ class http_conn {
 
    void initmysql_result(connection_pool* conn_pool);
 
+   // public:  // for test
   private:
    void init();
    // read()的辅助函数
@@ -146,7 +147,5 @@ class http_conn {
    int m_bytes_to_send;  // 主线程在该socket上已经发送了多少字节
    int m_bytes_have_send;  // 主线程还需要在该socket上发送多少字节
 };
-
-
 
 #endif

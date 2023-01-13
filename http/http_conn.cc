@@ -17,12 +17,7 @@ const char* error_500_title = "Internal Error";
 const char* error_500_form =
     "There was an unusual problem serving the request file.";
 
-http_conn::http_conn()
-    : m_read_index(0),
-      m_enable_et(true),
-      m_close_log(false),
-      m_content_length(0),
-      m_linger(false) {}
+http_conn::http_conn() { init(); }
 
 http_conn::~http_conn() {}
 
