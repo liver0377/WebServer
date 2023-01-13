@@ -1,14 +1,14 @@
 #include "utils/utils.h"
 
-int Utils::m_pipefd[2] = {0, 0};
+int Utils::m_sig_pipefd[2] = {-1, -1};
 int Utils::m_TIMESLOT = 1;
 
-/**
- * @brief 初始化Utils类
- *
- * @param timeslot   指定TIME_SLOT的值
- */
-void Utils::init(int timeslot) { m_TIMESLOT = timeslot; }
+// /**
+//  * @brief 初始化Utils类
+//  *
+//  * @param timeslot   指定TIME_SLOT的值
+//  */
+// void Utils::init(int timeslot) { m_TIMESLOT = timeslot; }
 
 /**
  * @brief 为指定文件描述符设置O_NONBLOCK标志
@@ -59,7 +59,7 @@ void Utils::sig_handler(int sig) {
    int saved_errno = errno;
 
    int msg = sig;
-   send(m_pipefd[1], (char*)&msg, 1, 0);
+   send(m_sig_pipefd[1], (char*)&msg, 1, 0);
 
    errno = saved_errno;
 }

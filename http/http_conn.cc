@@ -1,7 +1,7 @@
 #include "http/http_conn.h"
 
 int http_conn::m_user_count = 0;
-int http_conn::m_epollfd = 0;
+int http_conn::m_epollfd = -1;
 std::map<std::string, std::string> http_conn::m_users =
     std::map<std::string, std::string>();
 
@@ -231,6 +231,7 @@ void http_conn::initmysql_result(connection_pool* conn_pool) {
       m_users[temp1] = temp2;
    }
 }
+
 std::pair<bool, char*> http_conn::parse_request_line_method(char* start) {
    char* p;
    p = strpbrk(start, " \t");
