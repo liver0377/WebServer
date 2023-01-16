@@ -56,8 +56,8 @@ TEST(test_timer, test_sort_timer_lst_tail_add) {
    }
 }
 
-static int cnt = 0;
-void cb_func(client_data* data) { cnt++; }
+// static int cnt = 0;
+// void cb_func(client_data* data) { cnt++; }
 
 // TEST(test_timer, test_sort_timer_lst_tick_1) {
 //    sort_timer_lst list;

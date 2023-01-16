@@ -1,14 +1,20 @@
 #include "utils/utils.h"
 
-int Utils::m_sig_pipefd[2] = {-1, -1};
+int* Utils::m_sig_pipe = NULL;
 int Utils::m_TIMESLOT = 1;
+int Utils::m_epollfd = -1;
 
-// /**
-//  * @brief 初始化Utils类
-//  *
-//  * @param timeslot   指定TIME_SLOT的值
-//  */
-// void Utils::init(int timeslot) { m_TIMESLOT = timeslot; }
+/**
+ * @brief 初始化Utils类
+ *
+ * @param sig_pipe   整个进程的信号管道地址
+ * @param timeslot   指定TIME_SLOT的值
+ */
+void Utils::init(int epollfd, int* sig_pipe, int timeslot) {
+   epollfd = m_epollfd;
+   m_sig_pipe = sig_pipe;
+   m_TIMESLOT = timeslot;
+}
 
 /**
  * @brief 为指定文件描述符设置O_NONBLOCK标志
@@ -46,7 +52,7 @@ void Utils::addfd(int epollfd, int fd, bool enable_oneshot, bool enable_et) {
    }
    event.events = events;
 
-   epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+   assert(epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event) != -1);
    setnoblocking(fd);
 }
 
@@ -59,7 +65,7 @@ void Utils::sig_handler(int sig) {
    int saved_errno = errno;
 
    int msg = sig;
-   send(m_sig_pipefd[1], (char*)&msg, 1, 0);
+   send(m_sig_pipe[1], (char*)&msg, 1, 0);
 
    errno = saved_errno;
 }
@@ -85,7 +91,7 @@ void Utils::addsig(int sig, void (*handler)(int sig), bool restart) {
 }
 
 void Utils::removefd(int epollfd, int fd) {
-   epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL);
+   assert(epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL) != -1);
    close(fd);
 }
 
@@ -99,5 +105,7 @@ void Utils::modifyfd(int epollfd, int fd, int event, bool enable_et) {
    }
 
    ev.events = events;
-   epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev);
+   assert(epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev) != -1);
 }
+
+

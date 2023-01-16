@@ -103,10 +103,13 @@ class http_conn {
    bool add_blank_line();
 
   public:
-   MYSQL* m_mysql;
-   static int m_epollfd;     // 静态内核事件表
-   static int m_user_count;  // 系统中所有活跃的用户数目
-   int m_state;              // 对数据库的读写类型, 读为0, 写为1
+   MYSQL* m_mysql;                   // 该连接的mysql句柄
+   static int m_epollfd;             // 静态内核事件表
+   static int m_user_count;          // 系统中所有活跃的用户数目
+   sockaddr_in m_client_address;     // 客户端地址
+   static std::map<std::string, std::string>* m_users_map;
+
+   int m_state;  // 对数据库的读写类型, 读为0, 写为1
 
   private:
    char m_read_buf[READ_BUF_SIZE];    // http请求读缓冲区
@@ -116,9 +119,9 @@ class http_conn {
    int m_write_index;  // 下一次写入到m_write_buf的位置
 
    int m_connfd;                  // 连接套接字
-   sockaddr_in m_client_address;  // 客户端地址
+  
 
-   static std::map<std::string, std::string> m_users;
+   
    std::string m_user;    // sql用户名
    std::string m_passwd;  // sql密码
    std::string m_dbname;  // sql数据库名字
@@ -126,12 +129,12 @@ class http_conn {
    bool m_enable_et;  // 是否启用ET模式
    int m_close_log;   // 是否关闭日志
    char* m_doc_root;  // 该服务文档树的根部路径
-   int m_cgi;
 
    char* m_url;                      // 请求行中的请求资源
    char m_real_file[FILE_NAME_LEN];  // 请求文件对应的服务器真实路径
    char* m_file_address;             // 文件映射在内存中的地址
    struct stat m_file_stat;          // 请求文件的状态
+   char* m_string;                   // body的首部地址
 
    METHOD m_method;            // 请求方法
    char* m_version;            // 请求报文使用的http版本

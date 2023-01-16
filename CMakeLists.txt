@@ -6,18 +6,25 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_executable(
   websrv
-  main.cc ${PROJECT_SOURCE_DIR}/log/log.cc
+  main.cc
   ${PROJECT_SOURCE_DIR}/CGImysql/sql_connection_pool.cc
+  ${PROJECT_SOURCE_DIR}/config/config.cc
   ${PROJECT_SOURCE_DIR}/http/http_conn.cc
+  ${PROJECT_SOURCE_DIR}/log/log.cc
+  ${PROJECT_SOURCE_DIR}/server/server.cc
+  ${PROJECT_SOURCE_DIR}/timer/sort_timer_lst.cc
   ${PROJECT_SOURCE_DIR}/utils/utils.cc)
 
+add_subdirectory(CGImysql)
+add_subdirectory(config)
+add_subdirectory(http)
 add_subdirectory(locker)
 add_subdirectory(log)
+add_subdirectory(server)
 add_subdirectory(test)
-add_subdirectory(CGImysql)
+add_subdirectory(thread)
 add_subdirectory(timer)
 add_subdirectory(utils)
-add_subdirectory(http)
 add_subdirectory(third_party/googletest)
 
 # websrv构建时的include路径为项目根目录

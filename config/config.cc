@@ -20,7 +20,7 @@ Config::Config() {
    opt_linger = 0;
 
    // 数据库连接池数量,默认8
-   sql_num = 8;
+   connection_pool_size = 8;
 
    // 线程池内的线程数量,默认8
    thread_num = 8;
@@ -54,7 +54,7 @@ void Config::parse_arg(int argc, char *argv[]) {
             break;
          }
          case 's': {
-            sql_num = atoi(optarg);
+            connection_pool_size = atoi(optarg);
             break;
          }
          case 't': {

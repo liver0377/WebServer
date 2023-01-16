@@ -14,11 +14,13 @@ class ThreadPool {
               int thread_number = 8, int max_request = 10000);
    ~ThreadPool();
    bool append(T* request, int state);
-   bool append_p(T* request);
+   // bool append_p(T* request);
 
   private:
-   void* worker(void* arg);
+   static void* worker(void* arg);
    void run();
+   void runReactor(T* request);
+   void runProactor(T* request);
 
   private:
    int m_thread_num;              // 线程池中的线程数目
@@ -66,39 +68,64 @@ bool ThreadPool<T>::append(T* request, int state) {
    m_queuelocker.lock();
 
    if (m_work_queue.size() >= m_max_request) {
-      m_queulocker.unlock();
+      m_queuelocker.unlock();
       return false;
    }
 
-   // ??
    request->m_state = state;
 
-   m_work_queue->push_back(request);
+   m_work_queue.push_back(request);
    m_queuelocker.unlock();
    m_queuestate.post();
    return true;
 }
 
-template <typename T>
-bool ThreadPool<T>::append_p(T* request) {
-   m_queuelocker.lock();
-
-   if (m_work_queue.size() >= m_max_request) {
-      m_queulocker.unlock();
-      return false;
-   }
-
-   m_work_queue->push_back(request);
-   m_queuelocker.unlock();
-   m_queuestate.post();
-   return true;
-}
+// template <typename T>
+// bool ThreadPool<T>::append_p(T* request) {
+//    m_queuelocker.lock();
+// 
+//    if (m_work_queue.size() >= m_max_request) {
+//       m_queulocker.unlock();
+//       return false;
+//    }
+// 
+//    m_work_queue->push_back(request);
+//    m_queuelocker.unlock();
+//    m_queuestate.post();
+//    return true;
+// }
 
 template <typename T>
 void* ThreadPool<T>::worker(void* args) {
    ThreadPool* p = (ThreadPool*)args;
    p->run();
-   return pool;
+   return p;
+}
+
+template <typename T>
+void ThreadPool<T>::runReactor(T* request) {
+   bool ret;
+   if (request->m_state == 0) {
+      // 读任务
+      ret = request->read(); 
+      if (ret) {
+         connectionRAII conn(&request->m_mysql, m_conn_pool);
+         request->process();
+         return ;
+      }
+      
+      // 读取异常, 等待计时器自己超时
+      // request->close_conn();
+   } else {
+      // 写任务, 等待计时器自己超时
+      ret = request->write();
+   }
+}
+
+template <typename T>
+void ThreadPool<T>::runProactor(T* request) {
+   connectionRAII mysqlcon(&request->m_mysql, m_conn_pool);
+   request->process();
 }
 
 template <typename T>
@@ -116,32 +143,34 @@ void ThreadPool<T>::run() {
       m_work_queue.pop_front();
       m_queuelocker.unlock();
       if (!request) {
-         continue
+         continue ;
       };
 
       if (1 == m_actor_model) {
          // Reactor模式
-         if (0 == request->m_state) {
-            if (request->read()) {
-               request->improv = 1;
-               connectionRAII mysqlcon(&request->mysql, m_connPool);
-               request->process();
-            } else {
-               request->improv = 1;
-               request->timer_flag = 1;
-            }
-         } else {
-            if (request->write()) {
-               request->improv = 1;
-            } else {
-               request->improv = 1;
-               request->timer_flag = 1;
-            }
-         }
+         // if (0 == request->m_state) {
+         //    if (request->read()) {
+         //       // request->improv = 1;
+         //       connectionRAII mysqlcon(&request->mysql, m_connPool);
+         //       request->process();
+         //    } else {
+         //       // request->improv = 1;
+         //       // request->timer_flag = 1;
+         //    }
+         // } else {
+         //    if (request->write()) {
+         //       // request->improv = 1;
+         //    } else {
+         //       // request->improv = 1;
+         //       request->timer_flag = 1;
+         //    }
+         // }
+         runReactor(request);
       } else {
          // Proactor模式
-         connectionRAII mysqlcon(&request->mysql, m_connPool);
-         request->process();
+         // connectionRAII mysqlcon(&request->mysql, m_connPool);
+         // request->process();
+         runProactor(request);
       }
    }
 }

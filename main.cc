@@ -3,7 +3,7 @@
 int main(int argc, char *argv[]) {
 
    std::string user = "root";
-   std::string password = "root";
+   std::string password = "Sq17273747@";
    std::string db_name = "server_db";
 
    // 命令行参数解析
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
                config.thread_num, config.close_log, config.actor_model);
 
    // 2. 初始化日志系统
-   server.logWrite();
+   server.log();
 
    // 3. 初始化数据库连接池
    server.sqlPool();

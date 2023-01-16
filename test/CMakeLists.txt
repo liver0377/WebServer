@@ -27,13 +27,22 @@ target_link_libraries(
 target_compile_options(test_mysql PRIVATE -g)
 
 # 3 timer list test
-add_executable(test_lst_timer ${CMAKE_CURRENT_SOURCE_DIR}/test_lst_timer.cc
-                              ${PROJECT_SOURCE_DIR}/log/log.cc)
+add_executable(
+  test_lst_timer
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_lst_timer.cc
+  ${PROJECT_SOURCE_DIR}/log/log.cc
+  ${PROJECT_SOURCE_DIR}/timer/sort_timer_lst.cc
+  ${PROJECT_SOURCE_DIR}/utils/utils.cc
+  ${PROJECT_SOURCE_DIR}/http/http_conn.cc
+  ${PROJECT_SOURCE_DIR}/CGImysql/sql_connection_pool.cc)
+
 target_include_directories(
   test_lst_timer
   PUBLIC ${PROJECT_SOURCE_DIR}
   PUBLIC ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include)
-target_link_libraries(test_lst_timer PUBLIC ${GTEST_LIB})
+target_link_libraries(test_lst_timer
+ PUBLIC ${GTEST_LIB}
+ PUBLIC mysqlclient)
 target_compile_options(test_lst_timer PRIVATE -g)
 
 # 4 http test

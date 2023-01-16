@@ -2,8 +2,9 @@
 
 int http_conn::m_user_count = 0;
 int http_conn::m_epollfd = -1;
-std::map<std::string, std::string> http_conn::m_users =
-    std::map<std::string, std::string>();
+std::map<std::string, std::string>* http_conn::m_users_map =
+    new std::map<std::string, std::string>;
+// sort_timer_lst http_conn::m_timer_lst = sort_timer_lst();
 
 const char* ok_200_title = "OK";
 const char* error_400_title = "Bad Request";
@@ -90,7 +91,6 @@ void http_conn::init() {
    m_checked_index = 0;
    m_read_index = 0;
    m_write_index = 0;
-   m_cgi = 0;
    m_state = 0;
    // timer_flag = 0;
    // improv = 0;
@@ -103,8 +103,8 @@ void http_conn::init() {
 /**
  * @brief 从连接套接字读取一次数据到http读缓冲区
  *
- * @return true
- * @return false
+ * @return true 读到有效字节
+ * @return false 对端已关闭或者没有数据可读
  */
 bool http_conn::read_once() {
    int bytes_read = 0;
@@ -154,8 +154,8 @@ bool http_conn::read() {
  * @brief 被主线程所调用,
  * 将http写缓冲区中的数据以及文件内容通过连接socket发送给客户
  *
- * @return true
- * @return false
+ * @return true  继续保持连接
+ * @return false 断开连接
  */
 bool http_conn::write() {
    int temp = 0;
@@ -204,8 +204,15 @@ bool http_conn::write() {
          return false;
       }
    }
+
+   return true;
 }
 
+/**
+ * @brief 首先和数据库连接连接, 获取到所有的用户和密码
+ *
+ * @param conn_pool
+ */
 void http_conn::initmysql_result(connection_pool* conn_pool) {
    MYSQL* mysql = NULL;
    connectionRAII mysqlcon(&mysql, conn_pool);
@@ -228,7 +235,7 @@ void http_conn::initmysql_result(connection_pool* conn_pool) {
    while (MYSQL_ROW row = mysql_fetch_row(result)) {
       std::string temp1(row[0]);
       std::string temp2(row[1]);
-      m_users[temp1] = temp2;
+      m_users_map->insert({temp1, temp2});
    }
 }
 
@@ -244,7 +251,6 @@ std::pair<bool, char*> http_conn::parse_request_line_method(char* start) {
       m_method = GET;
    } else if (strcasecmp(start, "POST") == 0) {
       m_method = POST;
-      m_cgi = true;
    } else {
       return {false, NULL};
    }
@@ -372,7 +378,7 @@ http_conn::HTTP_CODE http_conn::parse_request_header(char* request_header) {
  * @return HTTP_CODE
  */
 http_conn::HTTP_CODE http_conn::parse_request_body(char* request_body) {
-   // 消息体还没有读完   存疑
+   // 消息体还没有读完
    if (m_read_index < m_content_length + m_checked_index) {
       return NO_REQUEST;
    }

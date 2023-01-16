@@ -13,6 +13,8 @@
 
 class Utils {
   public:
+   static void init(int epollfd, int* sig_pipe, int timeslot);
+
    static int setnoblocking(int fd);
 
    static void addfd(int epollfd, int fd, bool enable_oneshot, bool enable_et);
@@ -25,9 +27,12 @@ class Utils {
 
    static void addsig(int sig, void (*handler)(int sig), bool restart = true);
 
+
+
   public:
-   static int m_sig_pipefd[2];  // 信号处理器与整个进程的管道
-   static int m_TIMESLOT;       // TIME_SLOT
+   static int m_epollfd;    // 整个进程的内核事件表句
+   static int* m_sig_pipe;  // 信号处理器与整个进程的管道
+   static int m_TIMESLOT;   // TIME_SLOT
 };
 
 #endif
