@@ -11,9 +11,9 @@ int Utils::m_epollfd = -1;
  * @param timeslot   指定TIME_SLOT的值
  */
 void Utils::init(int epollfd, int* sig_pipe, int timeslot) {
-   epollfd = m_epollfd;
-   m_sig_pipe = sig_pipe;
-   m_TIMESLOT = timeslot;
+  m_epollfd = epollfd;
+  m_sig_pipe = sig_pipe;
+  m_TIMESLOT = timeslot;
 }
 
 /**
@@ -23,11 +23,11 @@ void Utils::init(int epollfd, int* sig_pipe, int timeslot) {
  * @return int fd上旧的标志
  */
 int Utils::setnoblocking(int fd) {
-   int old_option = fcntl(fd, F_GETFD);
-   int new_option = old_option | O_NONBLOCK;
-   fcntl(fd, F_SETFD, new_option);
+  int old_option = fcntl(fd, F_GETFD);
+  int new_option = old_option | O_NONBLOCK;
+  fcntl(fd, F_SETFD, new_option);
 
-   return old_option;
+  return old_option;
 }
 
 /**
@@ -38,22 +38,27 @@ int Utils::setnoblocking(int fd) {
  * @param enable_oneshot 是否启用EPOLLONESHOT
  * @param enable_et 是否启用EPOLLET
  *                 默认的触发事件为EPOLLIN | EPOLLHUP
+ * @param enable)out 是否启用EPOLLOUT
  */
-void Utils::addfd(int epollfd, int fd, bool enable_oneshot, bool enable_et) {
-   epoll_event event;
-   event.data.fd = fd;
+void Utils::addfd(int epollfd, int fd, bool enable_oneshot, bool enable_et,
+                  bool enable_out) {
+  epoll_event event;
+  event.data.fd = fd;
 
-   int events = EPOLLIN | EPOLLHUP;
-   if (enable_oneshot) {
-      events |= EPOLLONESHOT;
-   }
-   if (enable_et) {
-      events |= EPOLLET;
-   }
-   event.events = events;
+  int events = EPOLLIN | EPOLLHUP;
+  if (enable_oneshot) {
+    events |= EPOLLONESHOT;
+  }
+  if (enable_et) {
+    events |= EPOLLET;
+  }
+  if (enable_out) {
+    events |= EPOLLOUT;
+  }
+  event.events = events;
 
-   assert(epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event) != -1);
-   setnoblocking(fd);
+  assert(epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event) != -1);
+  setnoblocking(fd);
 }
 
 /**
@@ -62,12 +67,12 @@ void Utils::addfd(int epollfd, int fd, bool enable_oneshot, bool enable_et) {
  * @param sig  触发该函数的信号值
  */
 void Utils::sig_handler(int sig) {
-   int saved_errno = errno;
+  int saved_errno = errno;
 
-   int msg = sig;
-   send(m_sig_pipe[1], (char*)&msg, 1, 0);
+  int msg = sig;
+  send(m_sig_pipe[1], (char*)&msg, 1, 0);
 
-   errno = saved_errno;
+  errno = saved_errno;
 }
 
 /**
@@ -78,34 +83,39 @@ void Utils::sig_handler(int sig) {
  * @param restart 是否启用SA_RESTART标志
  */
 void Utils::addsig(int sig, void (*handler)(int sig), bool restart) {
-   struct sigaction act;
+  struct sigaction act;
 
-   act.sa_handler = handler;
-   sigfillset(&act.sa_mask);
+  act.sa_handler = handler;
+  sigfillset(&act.sa_mask);
 
-   if (restart) {
-      act.sa_flags |= SA_RESTART;
-   }
+  if (restart) {
+    act.sa_flags |= SA_RESTART;
+  }
 
-   assert(sigaction(sig, &act, NULL) != -1);
+  assert(sigaction(sig, &act, NULL) != -1);
 }
 
 void Utils::removefd(int epollfd, int fd) {
-   assert(epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL) != -1);
-   close(fd);
+  assert(epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, NULL) != -1);
+  close(fd);
 }
 
 void Utils::modifyfd(int epollfd, int fd, int event, bool enable_et) {
-   epoll_event ev;
-   ev.data.fd = fd;
+  // std::cout << "modifyfd()" << std::endl;
+  epoll_event ev;
+  ev.data.fd = fd;
 
-   int events = EPOLLIN | EPOLLHUP | EPOLLONESHOT;
-   if (enable_et) {
-      events |= EPOLLET;
-   }
+  // 使用EPOLLONESHOT避免该socket被多个线程竞争处理
+  ev.events = EPOLLHUP | EPOLLONESHOT;
+  if (enable_et) {
+    ev.events |= EPOLLET;
+  }
+  ev.events |= event;
 
-   ev.events = events;
-   assert(epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev) != -1);
+  // std::cout << "m_epollfd: " << m_epollfd << std::endl;
+  // std::cout << "m_connfd: " << fd << std::endl;
+  if (epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev) == -1) {
+    printf("errno: %d, %s\n", errno, strerror(errno));
+    throw std::exception();
+  }
 }
-
-

@@ -13,6 +13,7 @@ WebServer::WebServer()
       throw std::exception();
    }
 
+   memset(m_root, '\0', 1024);
    strcpy(m_root, server_root);
 
    char source_root[] = "/root";
@@ -102,7 +103,7 @@ void WebServer::triggerMode() {
       m_connect_trigger_mode = 0;
    }
 
-   if (m_trigger_mode = 3) {
+   if (m_trigger_mode == 3) {
       m_listen_trigger_mode = 1;
       m_connect_trigger_mode = 1;
    }
@@ -134,12 +135,15 @@ void WebServer::eventListen() {
    struct sockaddr_in address;
    bzero(&address, sizeof(address));
    address.sin_family = AF_INET;
-   address.sin_addr.s_addr = INADDR_ANY;
-   address.sin_port = htonl(m_port);
-   bind(m_listenfd, (const sockaddr*)&address, sizeof(address));
+   // address.sin_addr.s_addr = INADDR_ANY;
+   const char* ip = "10.60.29.27";
+   inet_pton(AF_INET, ip, &address.sin_addr);
+   address.sin_port = htons(m_port);
+   assert(bind(m_listenfd, (const sockaddr*)&address, sizeof(address)) != -1);
 
    // 5. listen, 在accept间隙, 最多接受11个ESTABLISHED连接
    assert(listen(m_listenfd, 10) != -1);
+   // Utils::setnoblocking(m_listenfd);
 
    // 6. 创建信号处理管道
    assert(socketpair(PF_UNIX, SOCK_STREAM, 0, m_sig_pipefd) != -1);
@@ -163,6 +167,9 @@ void WebServer::eventListen() {
 
    // 11. http_conn
    http_conn::m_epollfd = m_epollfd;
+   
+   // 12. 启动定时器
+   // alarm(TIMESLOT);
 }
 
 /**
@@ -275,6 +282,7 @@ void WebServer::deleteTimer(util_timer* timer, int sockfd) {
 }
 
 bool WebServer::dealNewConnection() {
+   // std::cout << "dealNewConnection()" << std::endl;
    bool ret = false;
    struct sockaddr_in client_address;
 
@@ -309,6 +317,8 @@ bool WebServer::dealNewConnection(struct sockaddr_in& client_address) {
    }
 
    timer(connfd, client_address);
+
+   Utils::addfd(m_epollfd, connfd, false, m_connect_trigger_mode);
 
    return true;
 }
@@ -426,6 +436,7 @@ void WebServer::dealWriteReactor(int sockfd) {
  * @param sockfd 连接套接字
  */
 void WebServer::dealWriteProactor(int sockfd) {
+   // std::cout << "dewlWriteProactor()" << std::endl;
    util_timer* timer = m_users_timer[sockfd].timer;
 
    if (m_users[sockfd].write()) {

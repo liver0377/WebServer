@@ -45,6 +45,11 @@ ThreadPool<T>::ThreadPool(int actor_model, connection_pool* conn_pool,
       throw std::exception();
    }
 
+   m_actor_model = actor_model;
+   m_conn_pool = conn_pool;
+   m_thread_num = thread_num;
+   m_max_request = max_request;
+
    for (int i = 0; i < thread_num; i++) {
       if (pthread_create(m_threads + i, NULL, worker, this) != 0) {
          delete[] m_threads;
@@ -130,8 +135,10 @@ void ThreadPool<T>::runProactor(T* request) {
 
 template <typename T>
 void ThreadPool<T>::run() {
+   // std::cout << "thread is created" << std::endl;
    while (true) {
       m_queuestate.wait();
+      // std::cout << "thread wake from blocking" << std::endl;
       m_queuelocker.lock();
 
       if (m_work_queue.empty()) {
@@ -170,6 +177,7 @@ void ThreadPool<T>::run() {
          // Proactor模式
          // connectionRAII mysqlcon(&request->mysql, m_connPool);
          // request->process();
+         // std::cout << "thread is running" << std::endl;
          runProactor(request);
       }
    }
