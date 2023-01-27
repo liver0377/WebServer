@@ -89,6 +89,7 @@ class Log {
     * @return void*
     */
    void* async_write_log() {
+      std::cout << "async_write_log()" << std::endl;
       std::string log_string;
 
       while (m_log_queue->pop(log_string)) {
@@ -99,6 +100,7 @@ class Log {
          m_mutex.unlock();
       }
 
+      std::cout << "async_write_log() over" << std::endl; 
       return (void*)0;
    }
 
@@ -119,6 +121,7 @@ class Log {
    char* m_buf;  // 日志缓冲区, 用户缓冲单行日志
    FILE* m_fp;   // Log文件指针
    block_queue<std::string>* m_log_queue;  // 阻塞队列
+
 };
 
 #define LOG_DEBUG(format, ...)                                  \
@@ -131,7 +134,7 @@ class Log {
       Log::get_instance()->write_log(1, format, ##__VA_ARGS__); \
       Log::get_instance()->flush();                             \
    }
-#define LOG_WARR(format, ...)                                   \
+#define LOG_WARR(format, ...)                                  \
    if (0 == m_close_log) {                                      \
       Log::get_instance()->write_log(2, format, ##__VA_ARGS__); \
       Log::get_instance()->flush();                             \

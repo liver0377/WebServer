@@ -39,8 +39,8 @@ http_conn::~http_conn() {}
 void http_conn::init(int connfd, const sockaddr_in& client_addr, char* doc_root,
                      bool enable_et, int close_log, const std::string& user,
                      const std::string& passwd, const std::string& dbname) {
-  // std::cout << "http_conn::init()" << std::endl;
-  // std::cout << "connfd: " << connfd << std::endl;
+  std::cout << "http_conn::init()" << std::endl;
+  std::cout << "connfd: " << connfd << std::endl;
   m_connfd = connfd;
   m_client_address = client_addr;
   m_enable_et = enable_et;
@@ -64,14 +64,14 @@ void http_conn::init(int connfd, const sockaddr_in& client_addr, char* doc_root,
 }
 
 void http_conn::close_conn() {
-  // std::cout << "close_conn()" << std::endl;
+  std::cout << "close_conn()" << std::endl;
   Utils::removefd(m_epollfd, m_connfd);
   m_connfd = -1;
   m_user_count--;
 }
 
 void http_conn::process() {
-  // std::cout << "process()" << std::endl;
+  std::cout << "process()" << std::endl;
   HTTP_CODE read_ret = process_read();
   if (read_ret == NO_REQUEST) {
     // 请求报文还没有读完
@@ -89,10 +89,10 @@ void http_conn::process() {
     close_conn();
   }
 
-  // std::cout << "m_epollfd: " << m_epollfd << "m_connfd: " << m_connfd
-  //           << std::endl;
+  std::cout << "m_epollfd: " << m_epollfd << "m_connfd: " << m_connfd
+            << std::endl;
   Utils::modifyfd(m_epollfd, m_connfd, EPOLLOUT, m_enable_et);
-  // std::cout << "process() over" << std::endl;
+  std::cout << "process() over" << std::endl;
 }
 
 void http_conn::init() {
@@ -111,6 +111,7 @@ void http_conn::init() {
   m_read_index = 0;
   m_write_index = 0;
   m_state = 0;
+  m_file_address = 0;
   // timer_flag = 0;
   // improv = 0;
 
@@ -126,22 +127,32 @@ void http_conn::init() {
  * @return false 对端已关闭或者没有数据可读
  */
 bool http_conn::read_once() {
+  std::cout << "read_once() " << std::endl;
   int bytes_read = 0;
+
+  std::cout << "m_read_index: " << m_read_index << std::endl;
+  std::cout << "READ_BUF_SIZE - m_read_index" << READ_BUF_SIZE - m_read_index;
+  // << std::endl; 将m_coonfd设置为O_ONOBLOCK依旧会阻塞 bug?
   bytes_read = recv(m_connfd, m_read_buf + m_read_index,
                     READ_BUF_SIZE - m_read_index, 0);
 
+  // std::cout << "----" << std::endl;
   if (bytes_read == -1) {
-    if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      std::cout << "read_once() over" << std::endl;
       return false;
     }
+    throw std::exception();
   }
 
   if (bytes_read == 0) {
+    std::cout << "read_once() over" << std::endl;
     return false;
   }
 
   m_read_index += bytes_read;
 
+  std::cout << "read_once() over" << std::endl;
   return true;
 }
 
@@ -153,16 +164,21 @@ bool http_conn::read_once() {
  *         false: 缓冲区满 | 对端关闭了连接 | 没有数据可读 | 其它非法错误
  */
 bool http_conn::read() {
-  // std::cout << "read()" << std::endl;
+  std::cout << "read()" << std::endl;
+
   if (m_read_index >= READ_BUF_SIZE) {
     return false;
   }
 
-  bool ans = true;
+  bool ans = false;
   if (m_enable_et) {
-    while (ans) {
-      ans = read_once();
-    }
+    bool ret = false;
+    do {
+      ret = read_once();
+      if (ret == true) {
+        ans = ret;
+      }
+    } while (ret);
   } else {
     ans = read_once();
   }
@@ -171,14 +187,14 @@ bool http_conn::read() {
 }
 
 /**
- * @brief 被主线程所调用,
+ * @brief
  * 将http写缓冲区中的数据以及文件内容通过连接socket发送给客户
  *
  * @return true  继续保持连接
  * @return false 断开连接
  */
 bool http_conn::write() {
-  // std::cout << "begin to write()" << std::endl;
+  std::cout << "begin to write()" << std::endl;
   int temp = 0;
 
   if (m_bytes_to_send == 0) {
@@ -334,7 +350,7 @@ std::pair<bool, char*> http_conn::parse_request_line_version(char* start) {
  * @return HTTP_CODE
  */
 http_conn::HTTP_CODE http_conn::parse_request_line(char* request_line) {
-  // std::cout << "parse_request_line()" << std::endl;
+  std::cout << "parse_request_line()" << std::endl;
   std::pair<bool, char*> ret;
 
   ret = parse_request_line_method(request_line);
@@ -352,9 +368,9 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* request_line) {
     return BAD_REQUEST;
   }
 
-  // std::cout << "m_method" << m_method << std::endl;
-  // std::cout << "m_url" << m_url << std::endl;
-  // std::cout << "m_version" << m_version << std::endl;
+  std::cout << "m_method" << m_method << std::endl;
+  std::cout << "m_url" << m_url << std::endl;
+  std::cout << "m_version" << m_version << std::endl;
 
   m_check_state = CHECK_STATE_REQUEST_HEADER;
   return NO_REQUEST;
@@ -367,14 +383,14 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* request_line) {
  * @return HTTP_CODE
  */
 http_conn::HTTP_CODE http_conn::parse_request_header(char* request_header) {
-  // std::cout << "parse_request_header()" << std::endl;
+  std::cout << "parse_request_header()" << std::endl;
   // 该行为空行
   if (request_header[0] == '\0') {
     if (m_content_length > 0) {
       m_check_state = CHECK_STATE_REQUEST_BODY;
       return NO_REQUEST;
     }
-    // std::cout << "m_content_length = 0" << std::endl;
+    std::cout << "m_content_length = 0" << std::endl;
     return GET_REQUEST;
   }
 
@@ -406,7 +422,7 @@ http_conn::HTTP_CODE http_conn::parse_request_header(char* request_header) {
  * @return HTTP_CODE
  */
 http_conn::HTTP_CODE http_conn::parse_request_body(char* request_body) {
-  // std::cout << "parse_request_body()" << std::endl;
+  std::cout << "parse_request_body()" << std::endl;
   // 消息体还没有读完
   if (m_read_index < m_content_length + m_checked_index) {
     return NO_REQUEST;
@@ -414,7 +430,7 @@ http_conn::HTTP_CODE http_conn::parse_request_body(char* request_body) {
 
   request_body[m_content_length] = '\0';
 
-  // std::cout << "m_body is set" << std::endl;
+  std::cout << "m_body is set" << std::endl;
   m_body = request_body;
 
   return GET_REQUEST;
@@ -428,7 +444,7 @@ http_conn::HTTP_CODE http_conn::parse_request_body(char* request_body) {
  * @return LINE_STATUS
  */
 http_conn::LINE_STATUS http_conn::parse_line() {
-  // std::cout << "parse_line()" << std::endl;
+  std::cout << "parse_line()" << std::endl;
   char ch;
   for (; m_checked_index < m_read_index; m_checked_index++) {
     ch = m_read_buf[m_checked_index];
@@ -469,7 +485,7 @@ http_conn::LINE_STATUS http_conn::parse_line() {
  * @return HTTP_CODE
  */
 http_conn::HTTP_CODE http_conn::process_read() {
-  // std::cout << "process_read()" << std::endl;
+  std::cout << "process_read()" << std::endl;
   char* text = NULL;
   int start_index = 0;
   LINE_STATUS line_status = LINE_OK;
@@ -530,10 +546,10 @@ http_conn::HTTP_CODE http_conn::process_read() {
  */
 // 待修改
 http_conn::HTTP_CODE http_conn::do_request() {
-  // std::cout << "do_request()" << std::endl;
+  std::cout << "do_request()" << std::endl;
   strcpy(m_real_file, m_doc_root);
 
-  int type = -1;  // 0: login, 1: register, 2: file request 
+  int type = -1;  // 0: login, 1: register, 2: file request
   if (strcmp(m_url, "/login") == 0) {
     type = 0;
   } else if (strcmp(m_url, "/register") == 0) {
@@ -627,16 +643,18 @@ http_conn::HTTP_CODE http_conn::do_request() {
   assert(m_file_address != MAP_FAILED);
   close(fd);
 
-  // std::cout << "url : " << url << " request file: " << m_real_file << std::endl;
-  // std::cout << "do_request() over" << std::endl;
+  // std::cout << "url : " << url << " request file: " << m_real_file <<
+  // std::endl; std::cout << "do_request() over" << std::endl;
   return FILE_REQUEST;
 }
 
 void http_conn::unmap() {
   if (m_file_address) {
     int ret;
+    // std::cout << "m_file_address" << m_file_address << std::endl;
     ret = munmap(m_file_address, m_file_stat.st_size);
     assert(ret != -1);
+    m_file_address = 0;
   }
 }
 /**
@@ -702,7 +720,7 @@ bool http_conn::add_blank_line() { return add_response("%s", "\r\n"); }
  * @return false
  */
 bool http_conn::process_write(HTTP_CODE read_ret) {
-  // std::cout << "process_write()" << std::endl;
+  std::cout << "process_write()" << std::endl;
   switch (read_ret) {
     case INTERNAL_ERROR:
       add_response_line(500, error_500_title);

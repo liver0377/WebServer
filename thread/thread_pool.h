@@ -109,6 +109,7 @@ void* ThreadPool<T>::worker(void* args) {
 
 template <typename T>
 void ThreadPool<T>::runReactor(T* request) {
+   std::cout << "runReactor()" << std::endl;
    bool ret;
    if (request->m_state == 0) {
       // 读任务
@@ -138,7 +139,7 @@ void ThreadPool<T>::run() {
    // std::cout << "thread is created" << std::endl;
    while (true) {
       m_queuestate.wait();
-      // std::cout << "thread wake from blocking" << std::endl;
+      std::cout << "thread wake from blocking" << std::endl;
       m_queuelocker.lock();
 
       if (m_work_queue.empty()) {

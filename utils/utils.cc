@@ -23,9 +23,10 @@ void Utils::init(int epollfd, int* sig_pipe, int timeslot) {
  * @return int fd上旧的标志
  */
 int Utils::setnoblocking(int fd) {
-  int old_option = fcntl(fd, F_GETFD);
+  // std::cout << "set " << fd << "to nonblocking" << std::endl;
+  int old_option = fcntl(fd, F_GETFL);
   int new_option = old_option | O_NONBLOCK;
-  fcntl(fd, F_SETFD, new_option);
+  assert(fcntl(fd, F_SETFL, new_option) != -1);
 
   return old_option;
 }
@@ -42,6 +43,7 @@ int Utils::setnoblocking(int fd) {
  */
 void Utils::addfd(int epollfd, int fd, bool enable_oneshot, bool enable_et,
                   bool enable_out) {
+  // std::cout << "add " << fd << " to epollfd" << std::endl;
   epoll_event event;
   event.data.fd = fd;
 
@@ -57,8 +59,8 @@ void Utils::addfd(int epollfd, int fd, bool enable_oneshot, bool enable_et,
   }
   event.events = events;
 
-  assert(epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event) != -1);
   setnoblocking(fd);
+  assert(epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event) != -1);
 }
 
 /**
@@ -114,8 +116,5 @@ void Utils::modifyfd(int epollfd, int fd, int event, bool enable_et) {
 
   // std::cout << "m_epollfd: " << m_epollfd << std::endl;
   // std::cout << "m_connfd: " << fd << std::endl;
-  if (epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev) == -1) {
-    printf("errno: %d, %s\n", errno, strerror(errno));
-    throw std::exception();
-  }
+  assert(epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev) != -1); 
 }
